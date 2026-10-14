@@ -1,32 +1,25 @@
-
 pipeline {
     agent any
 
     options {
         timestamps()
+        disableConcurrentBuilds()
     }
 
     environment {
-        REPO_URL = 'https://github.com/Bringways/ansible-.git'
+        ANSIBLE_PLAYBOOK = '/home/ansible/.local/bin/ansible-playbook'
         ANSIBLE_HOST_KEY_CHECKING = 'False'
     }
 
     stages {
-
-        stage('Git Checkout') {
-            steps {
-                git branch: 'main',
-                    url: 'https://github.com/Bringways/ansible-.git'
-            }
-        }
-
         stage('Validate Files') {
             steps {
                 sh '''
-                    test -f index.html
-                    test -f inventory
-                    test -f deploy.yml
-
+                    set -eu
+                    test -s Jenkinsfile
+                    test -s inventory
+                    test -s deploy.yml
+                    test -s index.html
                     echo "All project files found."
                 '''
             }
@@ -35,7 +28,8 @@ pipeline {
         stage('Ansible Syntax Check') {
             steps {
                 sh '''
-                    ansible-playbook \
+                    set -eu
+                    "$ANSIBLE_PLAYBOOK" \
                         -i inventory \
                         deploy.yml \
                         --syntax-check
@@ -53,7 +47,10 @@ pipeline {
                     )
                 ]) {
                     sh '''
-                        ansible-playbook \
+                        set -eu
+                        test -r "$SSH_KEY"
+
+                        "$ANSIBLE_PLAYBOOK" \
                             -i inventory \
                             deploy.yml \
                             --private-key "$SSH_KEY" \
@@ -68,11 +65,9 @@ pipeline {
         success {
             echo 'SUCCESS: Website deployed using Jenkins and Ansible!'
         }
-
         failure {
             echo 'FAILED: Check Jenkins Console Output.'
         }
-
         always {
             echo 'Pipeline execution completed.'
         }
