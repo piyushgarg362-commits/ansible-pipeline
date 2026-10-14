@@ -1,0 +1,36 @@
+
+---
+- name: Deploy website to AWS EC2
+  hosts: dev
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Install Nginx
+      ansible.builtin.package:
+        name: nginx
+        state: present
+
+    - name: Deploy website HTML
+      ansible.builtin.copy:
+        src: index.html
+        dest: /usr/share/nginx/html/index.html
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Start and enable Nginx
+      ansible.builtin.service:
+        name: nginx
+        state: started
+        enabled: true
+
+    - name: Verify Nginx responds locally
+      ansible.builtin.uri:
+        url: http://127.0.0.1/
+        status_code: 200
+        return_content: false
+
+    - name: Display deployment result
+      ansible.builtin.debug:
+        msg: "Website deployment completed on {{ inventory_hostname }}"
